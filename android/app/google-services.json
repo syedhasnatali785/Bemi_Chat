@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "491502125972",
+    "project_id": "bemichat-a8e4d",
+    "storage_bucket": "bemichat-a8e4d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:491502125972:android:f7d42d1ab2dcb02b450581",
+        "android_client_info": {
+          "package_name": "com.example.bemichat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDFjzpCsur2iJkTO9f6APcUBk6rU6PBWfo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

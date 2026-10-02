@@ -1,0 +1,26 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "bemichat-a8e4d",
+          "appId": "1:491502125972:android:f7d42d1ab2dcb02b450581",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "bemichat-a8e4d",
+          "configurations": {
+            "android": "1:491502125972:android:f7d42d1ab2dcb02b450581",
+            "web": "1:491502125972:web:e623178e65511e29450581",
+            "windows": "1:491502125972:web:d51f964959c771ce450581"
+          }
+        }
+      }
+    }
+  },
+  "functions": {
+    "source": "functions"
+  }
+}
