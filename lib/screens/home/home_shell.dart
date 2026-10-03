@@ -18,11 +18,19 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   late int _currentIndex;
+  late final PageController _pageController;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _logout() async {
@@ -149,6 +157,16 @@ class _HomeShellState extends State<HomeShell> {
     );
   }
 
+  void _changePage(int index) {
+    if (index == _currentIndex) return;
+    setState(() => _currentIndex = index);
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screens = [
@@ -182,7 +200,36 @@ class _HomeShellState extends State<HomeShell> {
           ),
         ],
       ),
-      body: IndexedStack(index: _currentIndex, children: screens),
+      floatingActionButton: _currentIndex == 0
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FloatingActionButton(
+                    heroTag: 'home_ai_fab',
+                    onPressed: () => context.push('/ai-chat'),
+                    tooltip: 'AI Chat',
+                    elevation: 0,
+                    child: const Icon(Icons.smart_toy_rounded),
+                  ),
+                  const SizedBox(height: 12),
+                  FloatingActionButton(
+                    heroTag: 'home_new_chat_fab',
+                    onPressed: () => context.push('/search-users'),
+                    tooltip: 'New chat',
+                    elevation: 0,
+                    child: const Icon(Icons.message_rounded),
+                  ),
+                ],
+              ),
+            )
+          : null,
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) => setState(() => _currentIndex = index),
+        children: screens,
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: NeomorphismTheme.backgroundGrey,
@@ -198,7 +245,7 @@ class _HomeShellState extends State<HomeShell> {
                     icon: Icons.chat_bubble_outline_rounded,
                     label: 'Chats',
                     selected: _currentIndex == 0,
-                    onTap: () => setState(() => _currentIndex = 0),
+                    onTap: () => _changePage(0),
                   ),
                 ),
                 Expanded(
@@ -206,7 +253,7 @@ class _HomeShellState extends State<HomeShell> {
                     icon: Icons.call_outlined,
                     label: 'Calls',
                     selected: _currentIndex == 1,
-                    onTap: () => setState(() => _currentIndex = 1),
+                    onTap: () => _changePage(1),
                   ),
                 ),
                 Expanded(
@@ -214,7 +261,7 @@ class _HomeShellState extends State<HomeShell> {
                     icon: Icons.explore_outlined,
                     label: 'Discover',
                     selected: _currentIndex == 2,
-                    onTap: () => setState(() => _currentIndex = 2),
+                    onTap: () => _changePage(2),
                   ),
                 ),
               ],

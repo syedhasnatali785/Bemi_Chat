@@ -71,4 +71,20 @@ void main() {
   test('notification service initializes notification payload routing constants', () {
     expect(NotificationService.instance.navigatorKey, isNotNull);
   });
+
+  test('call status payload is recognized and parsed', () {
+    final payload = {
+      'type': 'call_status',
+      'callId': 'call_123',
+      'status': 'accepted',
+      'callerId': 'user_456',
+      'calleeName': 'Alice',
+    };
+
+    expect(NotificationService.isCallStatusPayload(payload), isTrue);
+    expect(
+      NotificationService.extractCallStatusPayload(payload),
+      isNotNull,
+    );
+  });
 }

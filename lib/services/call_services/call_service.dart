@@ -181,6 +181,7 @@ class CallService {
   // Incoming call
   // -------------------------------------------------------------------
   Future<void> answerCall(String callId) async {
+    final myUid = FirebaseAuth.instance.currentUser?.uid;
     final callDoc = _firestore.collection('calls').doc(callId);
     final snap = await callDoc.get();
     final data = snap.data();
@@ -212,20 +213,82 @@ class CallService {
       'answer': {'sdp': answer.sdp, 'type': answer.type},
     });
 
+    if (myUid != null && data['callerId'] != null) {
+      unawaited(
+        _pushClient.sendNotification(
+          recipientUid: data['callerId'] as String,
+          data: {
+            'type': 'call_status',
+            'callId': callId,
+            'status': 'accepted',
+            'callerId': myUid,
+            'calleeName': data['calleeName'] ?? 'Caller',
+          },
+        ),
+      );
+    }
+
     _setState(CallState.connected);
     _listenForRemoteAnswerAndCandidates(callDoc, isCaller: false);
   }
 
   Future<void> declineCall(String callId) async {
-    await _firestore.collection('calls').doc(callId).update({
+    final myUid = FirebaseAuth.instance.currentUser?.uid;
+    final callDoc = _firestore.collection('calls').doc(callId);
+    final data = (await callDoc.get()).data();
+
+    await callDoc.update({
       'status': 'declined',
     });
+
+    if (myUid != null && data != null && data['callerId'] != null) {
+      unawaited(
+        _pushClient.sendNotification(
+          recipientUid: data['callerId'] as String,
+          data: {
+            'type': 'call_status',
+            'callId': callId,
+            'status': 'declined',
+            'callerId': myUid,
+            'calleeName': data['calleeName'] ?? 'Caller',
+          },
+        ),
+      );
+    }
+
     await FlutterCallkitIncoming.endCall(callId);
   }
 
   // -------------------------------------------------------------------
   // Shared signaling listeners
   // -------------------------------------------------------------------
+  Future<void> applyRemoteCallStatus({
+    required String callId,
+    required String status,
+  }) async {
+    if (_currentCallId == null || _currentCallId != callId) {
+      return;
+    }
+
+    if (status == 'accepted') {
+      _setState(CallState.connected);
+      return;
+    }
+
+    if (status == 'declined') {
+      _setState(CallState.ended);
+      await FlutterCallkitIncoming.endCall(callId);
+      await _cleanup(deleteDoc: false);
+      return;
+    }
+
+    if (status == 'ended') {
+      _setState(CallState.ended);
+      await FlutterCallkitIncoming.endCall(callId);
+      await _cleanup(deleteDoc: false);
+    }
+  }
+
   void _listenForRemoteAnswerAndCandidates(
     DocumentReference<Map<String, dynamic>> callDoc, {
     required bool isCaller,
@@ -236,6 +299,10 @@ class CallService {
       if (data == null) return;
 
       final status = data['status'] as String?;
+
+      if (isCaller && status == 'ringing') {
+        _setState(CallState.ringing);
+      }
 
       // Caller: once the callee answers, apply their SDP answer.
       if (isCaller && status == 'accepted' && data['answer'] != null) {

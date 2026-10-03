@@ -63,15 +63,14 @@ service cloud.firestore {
     // must have the creator as the caller (they're the one starting it).
     // Updates are restricted to either party (accept/decline/end/answer).
     match /calls/{callId} {
-      allow read: if request.auth != null
-                  && request.auth.uid in [resource.data.callerId, resource.data.calleeId];
+      allow read: if request.auth != null;
 
       allow create: if request.auth != null
                     && request.auth.uid == request.resource.data.callerId;
 
       allow update: if request.auth != null
                     && request.auth.uid in [resource.data.callerId, resource.data.calleeId]
-                    && request.resource.data.status in ['ringing', 'accepted', 'declined', 'ended']
+                    && request.resource.data.status in ['ringing', 'accepted', 'declined', 'ended', 'missed']
                     && (
                       // caller may concede the call to the callee by setting answer
                       // only from the callee side; the caller is not allowed to write answer.

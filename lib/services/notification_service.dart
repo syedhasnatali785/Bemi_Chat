@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:bemichat/screens/home/calls/voice_call_screen.dart';
@@ -37,6 +38,10 @@ class NotificationService {
     return data['type'] == 'call';
   }
 
+  static bool isCallStatusPayload(Map<String, dynamic> data) {
+    return data['type'] == 'call_status';
+  }
+
   static Map<String, dynamic>? extractCallPayload(Map<String, dynamic> data) {
     if (!isCallPayload(data)) return null;
 
@@ -55,6 +60,28 @@ class NotificationService {
     };
   }
 
+  static Map<String, dynamic>? extractCallStatusPayload(
+    Map<String, dynamic> data,
+  ) {
+    if (!isCallStatusPayload(data)) return null;
+
+    final callId = data['callId'] as String?;
+    final status = data['status'] as String?;
+    final callerId = data['callerId'] as String?;
+    final calleeName = data['calleeName'] as String?;
+    if (callId == null || status == null || callerId == null) {
+      return null;
+    }
+
+    return {
+      'type': 'call_status',
+      'callId': callId,
+      'status': status,
+      'callerId': callerId,
+      'calleeName': calleeName ?? 'Caller',
+    };
+  }
+
   static const _channel = AndroidNotificationChannel(
     'chat_messages',
     'Chat messages',
@@ -70,7 +97,16 @@ class NotificationService {
       await _requestPermission();
       await _setupLocalNotifications();
       await registerCallKitListeners();
-      await _syncToken();
+
+      FirebaseAuth.instance.authStateChanges().listen((user) {
+        if (user != null) {
+          unawaited(_syncToken());
+        }
+      });
+
+      if (FirebaseAuth.instance.currentUser != null) {
+        await _syncToken();
+      }
 
       messaging.onTokenRefresh.listen(_saveToken);
       FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
@@ -210,7 +246,18 @@ class NotificationService {
     debugPrint('📬 MESSAGE RECEIVED (foreground): ${message.messageId}');
     debugPrint('📬 Notification block present: ${message.notification != null}');
     debugPrint('📬 Data: ${message.data}');
-    
+
+    final callStatus = extractCallStatusPayload(message.data);
+    if (callStatus != null) {
+      debugPrint('📬 → Call status update: callId=${callStatus['callId']}, status=${callStatus['status']}');
+      final service = CallService.active;
+      await service.applyRemoteCallStatus(
+        callId: callStatus['callId'] as String,
+        status: callStatus['status'] as String,
+      );
+      return;
+    }
+
     final payload = extractCallPayload(message.data);
     if (payload != null) {
       debugPrint('📬 → Call notification: callId=${payload['callId']}');
@@ -262,6 +309,18 @@ class NotificationService {
       _navigateFromData(message.data);
 
   void _navigateFromData(Map<String, dynamic> data) {
+    final callStatus = extractCallStatusPayload(data);
+    if (callStatus != null) {
+      final service = CallService.active;
+      unawaited(
+        service.applyRemoteCallStatus(
+          callId: callStatus['callId'] as String,
+          status: callStatus['status'] as String,
+        ),
+      );
+      return;
+    }
+
     final payload = extractCallPayload(data);
     if (payload != null) {
       CallService.showIncomingCallkit(
